@@ -86,7 +86,7 @@ def construct_arguments(subparsers, argtype_translation_dict, cls):
     return arg_result
 
 
-class pycli(object):
+class pyclist(object):
     '''A class to generate an argparse-based commandline parser using one
     or more api classes, and help execute the selected method using
     the right arguments.
