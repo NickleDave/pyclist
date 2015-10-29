@@ -1,0 +1,5 @@
+* pyclist
+
+A small framework to quickly create cli scripts for REST (or other) APIs.
+
+** Usage
