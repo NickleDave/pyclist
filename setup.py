@@ -15,7 +15,10 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read().replace('.. :changelog:', '')
 
 requirements = [
-    # TODO: put package requirements here
+    "argcomplete",
+    "parinx",
+    "argparse",
+    "restkit"
 ]
 
 test_requirements = [
@@ -29,6 +32,7 @@ setup(
     long_description=readme + '\n\n' + history,
     author="Markus Binsteiner",
     author_email='makkus@gmail.com',
+
     url='https://github.com/makkus/pyclist',
     packages=[
         'pyclist',
@@ -53,5 +57,10 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     test_suite='tests',
-    tests_require=test_requirements
+    tests_require=test_requirements,
+    entry_points={
+	'console_scripts': [
+		'pyclist = pyclist.example:run'
+	],
+    }
 )
