@@ -69,10 +69,13 @@ def create_output_item(item, output_format=None):
 
     else:
         if isinstance(item, (list)):
-            for i in item:
-                result = "{0}{1}\n".format(result, pformat(dict(i)))
+            # for i in item:
+                # print type(i)
+                # result = "{0}{1}\n".format(result, pformat(dict(i)))
+            result = json.dumps(item, encoding='utf-8', indent=2)
         else:
-            result = pformat(dict(item))
+            result = item.to_json(encoding='utf-8', indent=2)
+            # result = pformat(dict(item))
 
     return result
 
