@@ -60,7 +60,7 @@ def create_output_item(item, output_format=None):
                     result = result + r
 
         else:
-        
+            values = []
             for token in output_format.split(","):
                 v = getattr(item, token)
                 values.append(unicode(v).replace('\n', ' '))
