@@ -8,11 +8,11 @@ import importlib
 import logging
 from restkit.errors import RequestFailed, ResourceError
 import traceback
-
 try:
     import simplejson as json
 except ImportError:
     import json # py2.6 only
+
 
 #TODO: make that more generic to be able to use other methods
 API_MARKER = 'call'
@@ -21,71 +21,46 @@ def is_api_method(field):
     return inspect.ismethod(field) and field.__name__.startswith(API_MARKER)
 
 
-def str_to_class(module_list, class_name):
-    for module_name in module_list:
-        try:
-            module_ = importlib.import_module(module_name)
-            try:
-                class_ = getattr(module_, class_name)
-                return class_ or None
-
-            except AttributeError:
-                logging.error('Class does not exist')
-        except ImportError:
-            logging.error('Module {} does not exist'.format(module_))
-
-    raise Exception("Can't find module for {}".format(class_name))
-
-
-def create_output_item(item, output_format=None):
+def create_output_item_list(item, list_append=[]):
     '''
-    Helper method to pretty print results.
+    Populates a list of output items.
+
+    :param item: either a list or a single object
+    :type item: list or object
+    :param list_append: the list to populate
+    :type list_append: list
+    :return: nothing, the provided list contains a json strings
+    :rtype: None
     '''
 
+    if isinstance(item, (list, tuple)) and not isinstance(item, basestring):
+        for i in item:
+            create_output_item_list(i, list_append, output_format)
 
-    result = ""
+        return
 
-    if output_format:
-
-        if isinstance(item, (list)):
-            result = ""
-            for i in item:
-                values = []
-                for token in output_format.split(","):
-                    v = getattr(i, token)
-                    values.append(unicode(v).replace('\n', ' '))
-
-                r = u'\t'.join(values).encode('utf-8')
-                if r:
-                    result = result + r
-
-        else:
-            values = []
-            for token in output_format.split(","):
-                v = getattr(item, token)
-                values.append(unicode(v).replace('\n', ' '))
-
-            result = u'\t'.join(values).encode('utf-8')
-
+    if hasattr(item, "to_json") and callable(getattr(item, "to_json")):
+        list_append.append(item.to_json(sort_keys=True, indent=2))
     else:
-        if isinstance(item, (list)):
-            # for i in item:
-                # print type(i)
-                # result = "{0}{1}\n".format(result, pformat(dict(i)))
-            result = json.dumps(item, encoding='utf-8', indent=2)
-        else:
-            result = item.to_json(encoding='utf-8', indent=2)
-            # result = pformat(dict(item))
-
-    return result
-
+        list_append.append(json.dumps(item, sort_keys=True, indent=2))
 
 def create_type_function(arg_type, init_functions={}):
+    '''
+    Creates an init function for the specified type.
+
+    This is used to be forwarded to the argparse type which in turn uses it to initiate the parameter object form a string.
+
+    :param arg_type: the type name of the argument (using the docstring param value)
+    :type arg_type: str
+    :param init_functions: a dict of functions to lookup the arg_type
+    :type init_functions: dict
+    :return: a function to initialize the provided argument value from a string
+    :rtype: method
+    '''
 
     if init_functions.get(arg_type, None):
         i_fun = init_functions.get(arg_type)
     else:
-        #TODO: that probably doesn't make sense...
         i_fun = eval(arg_type)
 
     def create(string):
@@ -101,6 +76,16 @@ class pyclist(object):
     '''
 
     def __init__(self, name, description):
+        '''
+        Creates a pyclist instance.
+
+        TODO: explain input maps/positional arguments
+
+        :param name: the name of the commandline application to create
+        :type name: str
+        :param description: a short description of the commandline application, will be used in the generated help message.
+        :type name: str
+        '''
 
         self.argtype_translation_dict = {}  # to store the arg types of the different commands
 
@@ -133,6 +118,12 @@ class pyclist(object):
         '''
         Adds arguments to subparsers, returns populated dict of methods and their details.
 
+        :param cls: the class to parse for methods to use
+        :type cls: type
+        :param positional_args: a dict of argument names per method name which should be used as positional argument.
+        :type positional_args: dict
+        :rtype: dict
+        :return: a dict with metadata used for creating the cli arguments with argparse
         '''
 
         arg_result = {}
@@ -160,6 +151,7 @@ class pyclist(object):
         Creates a commandline parser (sub-command) for an api method.
 
         Uses the methods 'sphinx'-doc to generate the arguments for the sub-command.
+
         '''
         desc = description
         return_desc = return_dict['description']
@@ -205,7 +197,7 @@ class pyclist(object):
         self.namespace = self.root_parser.parse_args()
         self.command = self.namespace.command
         self.parameters = self.namespace.__dict__.copy()
-
+        self.positional_arguments = False
 
 
     def execute(self):
@@ -242,7 +234,7 @@ class pyclist(object):
         if pos_arg_values:
             self.result = []
             for v in pos_arg_values:
-
+                self.positional_arguments = True
                 temp_args = api_args.copy()
                 temp_args[pos_arg] = v
                 r = methodToCall(**temp_args)
@@ -256,27 +248,33 @@ class pyclist(object):
         return self.result
 
 
-    def print_result(self, output_format=None, separator='\n'):
+    def print_result(self, output_format=None, separator=u'\n', token_separator=u'\t'):
+        '''
+        Prints either json output, or a table of strings from the result of the method call.
+        '''
 
-        if isinstance(self.result, Exception):
-            # print "{0}: {1}".format(self.result.status_int, self.result.msg)
-            # traceback.print_stack()
-            print self.result
-            return
-
-        if isinstance(self.result, bool):
-            print self.result
-            return
-
-        if isinstance(self.result, list):
-            output = []
+        output = []
+        if self.positional_arguments:
             for item in self.result:
+                create_output_item_list(item, output)
+        else:
+            create_output_item_list(self.result, output)
 
-                output.append(create_output_item(item, output_format))
+        if not output_format:
 
-            print separator.join(output)
-            return
+            if len(output) == 1:
+                print output[0]
+            else:
+                print "["+",\n".join(output)+"]"
 
         else:
-            output = create_output_item(self.result, output_format)
-            print output
+
+            lines = []
+            for o in output:
+                dict_obj = json.loads(o)
+                line = []
+                for token in output_format.split(','):
+                    line.append(unicode(dict_obj[token]))
+                lines.append(token_separator.join(line))
+
+            print separator.join(lines)

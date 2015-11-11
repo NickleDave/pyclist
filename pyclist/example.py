@@ -27,7 +27,8 @@ class ExampleApi1(object):
         :rtype: None
         '''
 
-        print "Hello {0}{1}".format(name.name, self.ending)
+        result = "Hello {0}{1}".format(name.name, self.ending)
+        return result
 
     def call_print_goodbye(self, name):
         '''Prints goodbye.
@@ -40,7 +41,8 @@ class ExampleApi1(object):
         :rtype: None
         '''
 
-        print "Goodbye {0}{1}".format(name, self.ending)
+        result = "Goodbye {0}{1}".format(name, self.ending)
+        return result
 
 
 class PyclistExample(object):
@@ -55,9 +57,9 @@ class PyclistExample(object):
 
         self.cli.parse_arguments()
 
-        result = self.cli.execute()
+        self.cli.execute()
 
-
+        self.cli.print_result()
 
 def run():
     PyclistExample()
