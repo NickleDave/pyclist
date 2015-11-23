@@ -20,10 +20,24 @@ def is_api_method(field):
 
     return inspect.ismethod(field) and field.__name__.startswith(API_MARKER)
 
+def recursive_get(dict_o, key):
+    '''Helper to get key from a string of the format: key1.key2.key3'''
+
+    if not dict_o:
+        return {}
+    else:
+        return dict.get(dict_o, key)
+
 
 def create_output_item_list(item, list_append=[]):
     '''
     Populates a list of output items.
+
+    If the item is a list, it will be flattened and this method will be
+    called recursively. If it is a string, it will be appended as is.
+    If it has a method "to_json()" the result of that call will be appended.
+    In all other cases json.dumps() will be called on the object and the result
+    of that call will be appended.
 
     :param item: either a list or a single object
     :type item: list or object
@@ -35,14 +49,18 @@ def create_output_item_list(item, list_append=[]):
 
     if isinstance(item, (list, tuple)) and not isinstance(item, basestring):
         for i in item:
-            create_output_item_list(i, list_append, output_format)
+            create_output_item_list(i, list_append)
 
+        return
+    elif isinstance(item, basestring):
+        list_append.append(item)
         return
 
     if hasattr(item, "to_json") and callable(getattr(item, "to_json")):
         list_append.append(item.to_json(sort_keys=True, indent=2))
     else:
         list_append.append(json.dumps(item, sort_keys=True, indent=2))
+
 
 def create_type_function(arg_type, init_functions={}):
     '''
@@ -146,6 +164,7 @@ class pyclist(object):
 
         return arg_result
 
+
     def create_arg_object(self, cls, name, arguments_dict, return_dict, description, positional_arg=None):
         '''
         Creates a commandline parser (sub-command) for an api method.
@@ -186,7 +205,7 @@ class pyclist(object):
         parser.set_defaults(command=name)
 
 
-    def parse_arguments(self):
+    def parse_arguments(self, args=None):
         '''
         Parses all arguments, and stores the resulting argparse namespace in a field 'parameters' as a dict.
 
@@ -194,7 +213,7 @@ class pyclist(object):
         '''
 
         argcomplete.autocomplete(self.root_parser)
-        self.namespace = self.root_parser.parse_args()
+        self.namespace = self.root_parser.parse_args(args=args)
         self.command = self.namespace.command
         self.parameters = self.namespace.__dict__.copy()
         self.positional_arguments = False
@@ -272,9 +291,15 @@ class pyclist(object):
             lines = []
             for o in output:
                 dict_obj = json.loads(o)
+                if not dict_obj:
+                    continue
                 line = []
+
                 for token in output_format.split(','):
-                    line.append(unicode(dict_obj[token]))
+                    value = reduce(recursive_get, token.split("."), dict_obj)
+                    if not value:
+                        value = ""
+                    line.append(unicode(value))
                 lines.append(token_separator.join(line))
 
             print separator.join(lines)

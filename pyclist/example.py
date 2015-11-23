@@ -17,14 +17,24 @@ class ExampleApi1(object):
             self.ending = ''
 
 
+    def call_print_default(self):
+        '''
+        Prints the default greeting to noone in particular.
+
+        :return: the greeting
+        :rtype: str
+        '''
+        result = "Oy, Stranger{0}".format(self.ending)
+        return result
+
     def call_print_hello(self, name):
         '''
         Prints hello.
 
         :param name: the name to print
         :type name: ExampleModel
-        :return: nothing
-        :rtype: None
+        :return: the greeting
+        :rtype: str
         '''
 
         result = "Hello {0}{1}".format(name.name, self.ending)
@@ -37,8 +47,8 @@ class ExampleApi1(object):
 
         :param name: the name to print
         :type name: str
-        :return: nothing
-        :rtype: None
+        :return: the greeting
+        :rtype: str
         '''
 
         result = "Goodbye {0}{1}".format(name, self.ending)
@@ -63,3 +73,6 @@ class PyclistExample(object):
 
 def run():
     PyclistExample()
+
+if __name__ == '__main__':
+    run()

@@ -18,7 +18,8 @@ requirements = [
     "argcomplete",
     "parinx",
     "argparse",
-    "restkit"
+    "restkit",
+    "booby"
 ]
 
 test_requirements = [
