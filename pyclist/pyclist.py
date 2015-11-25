@@ -26,7 +26,8 @@ def recursive_get(dict_o, key):
     if not dict_o:
         return {}
     else:
-        return dict.get(dict_o, key)
+        result = dict.get(dict_o, key)
+        return result
 
 
 def create_output_item_list(item, list_append=[]):
@@ -298,8 +299,8 @@ class pyclist(object):
                 for token in output_format.split(','):
                     value = reduce(recursive_get, token.split("."), dict_obj)
                     if not value:
-                        value = ""
+                        value = u''
                     line.append(unicode(value))
                 lines.append(token_separator.join(line))
 
-            print separator.join(lines)
+            print separator.join(lines).encode("utf-8")
