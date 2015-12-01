@@ -11,14 +11,22 @@ import traceback
 try:
     import simplejson as json
 except ImportError:
-    import json # py2.6 only
+    import json  # py2.6 only
 
 
-#TODO: make that more generic to be able to use other methods
+# TODO: make that more generic to be able to use other methods
 API_MARKER = 'call'
+
+
 def is_api_method(field):
 
     return inspect.ismethod(field) and field.__name__.startswith(API_MARKER)
+
+
+def default_errorhandling(e):
+
+    return e
+
 
 def recursive_get(dict_o, key):
     '''Helper to get key from a string of the format: key1.key2.key3'''
@@ -106,13 +114,15 @@ class pyclist(object):
         :type name: str
         '''
 
-        self.argtype_translation_dict = {}  # to store the arg types of the different commands
+        # to store the arg types of the different commands
+        self.argtype_translation_dict = {}
 
         self.root_parser = argparse.ArgumentParser(description=description)
-        self.subparsers = self.root_parser.add_subparsers(help='sub-command to run')
+        self.subparsers = self.root_parser.add_subparsers(
+            help='sub-command to run')
         self.arg_details = {}
         self.init_functions = {}
-
+        self.error_handling = default_errorhandling
 
     def add_command(self, cls, positional_args={}, init_functions={}):
         '''
@@ -131,7 +141,6 @@ class pyclist(object):
         self.init_functions[cls] = init_functions
         details = self.construct_arguments(cls, positional_args)
         self.arg_details.update(details)
-
 
     def construct_arguments(self, cls, positional_args={}):
         '''
@@ -154,17 +163,16 @@ class pyclist(object):
             docstring = parser.get_method_docstring(cls, name)
             result = parser.parse_docstring(docstring, cls)
             result['class'] = cls
-            pretty_name = name[len(API_MARKER)+1:]
+            pretty_name = name[len(API_MARKER) + 1:]
             # adding argument to subparsers
             positional_arg = positional_args.get(pretty_name, None)
             result['positional_arg'] = positional_arg
-            arg = self.create_arg_object(cls, pretty_name, result['arguments'], result['return'], result['description'], positional_arg)
+            arg = self.create_arg_object(cls, pretty_name, result['arguments'], result[
+                                         'return'], result['description'], positional_arg)
 
             arg_result[pretty_name] = result
 
-
         return arg_result
-
 
     def create_arg_object(self, cls, name, arguments_dict, return_dict, description, positional_arg=None):
         '''
@@ -180,31 +188,33 @@ class pyclist(object):
 
         for key, value in arguments_dict.iteritems():
 
-                arg = value['type_name']
-                desc = value['description']
-                required = value['required']
+            arg = value['type_name']
+            desc = value['description']
+            required = value['required']
 
-                arg_type = arg
-                if not arg_type == 'list':
-                    type_fun = create_type_function(arg_type, self.init_functions.get(cls, {}))
+            arg_type = arg
+            if not arg_type == 'list':
+                type_fun = create_type_function(
+                    arg_type, self.init_functions.get(cls, {}))
 
-                    if key == positional_arg:
-                        arg_name = key
-                        parser.add_argument(arg_name, help=desc, type=type_fun, nargs='+')
-                    else:
-                        arg_name = '--'+key
-                        parser.add_argument(arg_name, help=desc, required=required, type=type_fun)
+                if key == positional_arg:
+                    arg_name = key
+                    parser.add_argument(arg_name, help=desc,
+                                        type=type_fun, nargs='+')
                 else:
-                    if key == positional_arg:
-                        arg_name = key
-                        parser.add_argument(arg_name, help=desc, nargs='+')
-                    else:
-                        arg_name = '--'+key
-                        parser.add_argument(arg_name, help=desc, required=required, type=str)
-
+                    arg_name = '--' + key
+                    parser.add_argument(arg_name, help=desc,
+                                        required=required, type=type_fun)
+            else:
+                if key == positional_arg:
+                    arg_name = key
+                    parser.add_argument(arg_name, help=desc, nargs='+')
+                else:
+                    arg_name = '--' + key
+                    parser.add_argument(arg_name, help=desc,
+                                        required=required, type=str)
 
         parser.set_defaults(command=name)
-
 
     def parse_arguments(self, args=None):
         '''
@@ -219,7 +229,6 @@ class pyclist(object):
         self.parameters = self.namespace.__dict__.copy()
         self.positional_arguments = False
 
-
     def execute(self):
         '''
         Calls the user-selected method with the approriate parameters.
@@ -228,7 +237,7 @@ class pyclist(object):
         cls = self.arg_details[self.command]['class']
         self.api = cls(**self.parameters)
 
-        methodToCall = getattr(self.api, API_MARKER+'_'+self.command)
+        methodToCall = getattr(self.api, API_MARKER + '_' + self.command)
 
         api_args = {}
 
@@ -242,7 +251,8 @@ class pyclist(object):
 
             if key == pos_arg:
 
-                arg_type = self.arg_details[self.command]['arguments'][key]['type_name']
+                arg_type = self.arg_details[self.command][
+                    'arguments'][key]['type_name']
                 if arg_type == 'list':
                     api_args[key] = v
                 else:
@@ -250,23 +260,28 @@ class pyclist(object):
             else:
                 api_args[key] = v
 
-        # if we have a positional argument, we execute the method for every one of those
-        if pos_arg_values:
-            self.result = []
-            for v in pos_arg_values:
-                self.positional_arguments = True
-                temp_args = api_args.copy()
-                temp_args[pos_arg] = v
-                r = methodToCall(**temp_args)
-                self.result.append(r)
-        else:
-            try:
-                self.result = methodToCall(**api_args)
-            except Exception as e:
-                self.result = e
+            # if we have a positional argument, we execute the method for every
+            # one of those
+            if pos_arg_values:
+                self.result = []
+                for v in pos_arg_values:
+                    self.positional_arguments = True
+                    temp_args = api_args.copy()
+                    temp_args[pos_arg] = v
+                    try:
+                        r = methodToCall(**temp_args)
+                        self.result.append(r)
+                    except Exception as e:
+                        error_obj = self.error_handling(e)
+                        self.result.append(error_obj)
+            else:
+                try:
+                    self.result = methodToCall(**api_args)
+                except Exception as e:
+                    error_obj = self.error_handling(e)
+                    self.result = error_obj
 
-        return self.result
-
+            return self.result
 
     def print_result(self, output_format=None, separator=u'\n', token_separator=u'\t'):
         '''
@@ -285,7 +300,7 @@ class pyclist(object):
             if len(output) == 1:
                 print output[0]
             else:
-                print "["+",\n".join(output)+"]"
+                print "[" + ",\n".join(output) + "]"
 
         else:
 
