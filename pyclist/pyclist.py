@@ -3,11 +3,8 @@ import argparse
 import argcomplete
 import inspect
 from parinx import parser
-from pprint import pprint, pformat
-import importlib
 import logging
-from restkit.errors import RequestFailed, ResourceError
-import traceback
+
 try:
     import simplejson as json
 except ImportError:
@@ -68,7 +65,10 @@ def create_output_item_list(item, list_append=[]):
     if hasattr(item, "to_json") and callable(getattr(item, "to_json")):
         list_append.append(item.to_json(sort_keys=True, indent=2))
     else:
-        list_append.append(json.dumps(item, sort_keys=True, indent=2))
+        if isinstance(item, Exception):
+            list_append.append(item)
+        else:
+            list_append.append(json.dumps(item, sort_keys=True, indent=2))
 
 
 def create_type_function(arg_type, init_functions={}):
@@ -191,8 +191,8 @@ class pyclist(object):
             arg = value['type_name']
             desc = value['description']
             required = value['required']
-
             arg_type = arg
+
             if not arg_type == 'list':
                 type_fun = create_type_function(
                     arg_type, self.init_functions.get(cls, {}))
@@ -201,10 +201,12 @@ class pyclist(object):
                     arg_name = key
                     parser.add_argument(arg_name, help=desc,
                                         type=type_fun, nargs='+')
+
                 else:
                     arg_name = '--' + key
                     parser.add_argument(arg_name, help=desc,
                                         required=required, type=type_fun)
+
             else:
                 if key == positional_arg:
                     arg_name = key
@@ -224,6 +226,7 @@ class pyclist(object):
         '''
 
         argcomplete.autocomplete(self.root_parser)
+
         self.namespace = self.root_parser.parse_args(args=args)
         self.command = self.namespace.command
         self.parameters = self.namespace.__dict__.copy()
@@ -245,41 +248,49 @@ class pyclist(object):
 
         pos_arg_values = []
 
-        for key, value in self.arg_details[self.command]['arguments'].iteritems():
+        args = self.arg_details[self.command]['arguments']
+        if len(args) == 0:
 
-            v = vars(self.namespace)[key]
+            self.result = methodToCall()
 
-            if key == pos_arg:
+        else:
 
-                arg_type = self.arg_details[self.command][
-                    'arguments'][key]['type_name']
-                if arg_type == 'list':
-                    api_args[key] = v
+            for key, value in self.arg_details[self.command]['arguments'].iteritems():
+
+                v = vars(self.namespace)[key]
+
+                if key == pos_arg:
+
+                    arg_type = self.arg_details[self.command][
+                        'arguments'][key]['type_name']
+                    if arg_type == 'list':
+                        api_args[key] = v
+                    else:
+                        pos_arg_values = v
                 else:
-                    pos_arg_values = v
-            else:
-                api_args[key] = v
+                    api_args[key] = v
 
-            # if we have a positional argument, we execute the method for every
-            # one of those
-            if pos_arg_values:
-                self.result = []
-                for v in pos_arg_values:
-                    self.positional_arguments = True
-                    temp_args = api_args.copy()
-                    temp_args[pos_arg] = v
+                # if we have a positional argument, we execute the method for every
+                # one of those
+                if pos_arg_values:
+                    self.result = []
+                    for v in pos_arg_values:
+                        self.positional_arguments = True
+                        temp_args = api_args.copy()
+                        temp_args[pos_arg] = v
+                        try:
+                            r = methodToCall(**temp_args)
+                            self.result.append(r)
+                        except Exception as e:
+                            error_obj = self.error_handling(e)
+                            self.result.append(error_obj)
+                else:
                     try:
-                        r = methodToCall(**temp_args)
-                        self.result.append(r)
+                        self.result = methodToCall(**api_args)
+
                     except Exception as e:
                         error_obj = self.error_handling(e)
-                        self.result.append(error_obj)
-            else:
-                try:
-                    self.result = methodToCall(**api_args)
-                except Exception as e:
-                    error_obj = self.error_handling(e)
-                    self.result = error_obj
+                        self.result = error_obj
 
             return self.result
 
@@ -289,6 +300,7 @@ class pyclist(object):
         '''
 
         output = []
+
         if self.positional_arguments:
             for item in self.result:
                 create_output_item_list(item, output)

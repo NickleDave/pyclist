@@ -1,5 +1,6 @@
 from pyclist import pyclist
 
+
 class ExampleModel(object):
 
     def __init__(self, string):
@@ -15,7 +16,6 @@ class ExampleApi1(object):
             self.ending = ending
         else:
             self.ending = ''
-
 
     def call_print_default(self):
         '''
@@ -61,15 +61,18 @@ class PyclistExample(object):
 
         self.cli = pyclist('pyclist_example', 'A commandline wrapper example.')
 
-        self.cli.root_parser.add_argument('--ending', '-e', help='string or character to append to every output ,global, applicable for all sub-commands')
+        self.cli.root_parser.add_argument(
+            '--ending', '-e', help='string or character to append to every output ,global, applicable for all sub-commands')
 
-        self.cli.add_command(ExampleApi1, {'print_hello':'name'}, {'ExampleModel': ExampleModel})
+        self.cli.add_command(ExampleApi1, {'print_hello': 'name'}, {
+                             'ExampleModel': ExampleModel})
 
         self.cli.parse_arguments()
 
         self.cli.execute()
 
         self.cli.print_result()
+
 
 def run():
     PyclistExample()
