@@ -49,6 +49,8 @@ def get_type(model):
         return 'Integer'
     elif type(model) == fields.String or model == fields.String:
         return 'String'
+    else:
+        return model.__name__
 
 
 def is_required(field):
@@ -64,6 +66,10 @@ def convert_to_proper_base_type(base_type, value):
     if get_type(base_type) == 'Integer':
         return int(value)
     elif get_type(base_type) == 'String':
+        return value
+    elif get_type(base_type) == 'Boolean':
+        return bool(value)
+    else:
         return value
 
 
@@ -92,6 +98,12 @@ def ask_details_for_type(model_type, ask_only_required=True, help_map={}):
         else:
             non_required_details[k] = f
 
+    print
+    print "Enter values for fields below. Enter '?' or '? arg1 [arg2]' for help for each field."
+    print
+    print "Required fields:"
+    print "----------------"
+    print
     for k, f in required_details.iteritems():
         while True:
             value = ask_detail_for_field(k, f, ask_only_required, help_map)
@@ -99,13 +111,25 @@ def ask_details_for_type(model_type, ask_only_required=True, help_map={}):
                 values[k] = value
                 break
             else:
+                print
                 print "This is a required field, please enter value for {}.".format(k)
 
+            print
+
     if not ask_only_required:
+
+        print
+        print "Optional fields, press 'Enter' to ignore a field."
+        print "-------------------------------------------------"
+        print
+
         for k, f in non_required_details.iteritems():
             value = ask_detail_for_field(k, f, ask_only_required, help_map)
+
             if value:
                 values[k] = value
+
+            print
 
     obj = model_type(**values)
 
@@ -115,6 +139,8 @@ def ask_details_for_type(model_type, ask_only_required=True, help_map={}):
 def ask_collection_detail(name, detail_type, ask_only_required=True, help_map={}):
 
     result = []
+    print "Enter details for '{}', multiple entries possible, press enter to continue to next field.".format(name)
+    print
     while True:
         cd = ask_detail_for_field(
             name, detail_type, ask_only_required, help_map)
@@ -133,7 +159,9 @@ def parse_for_help(answer, help_func):
         if not help_func:
             print 'Sorry, no help available for this field.'
         else:
+            print
             help_func(*args)
+            print
         return True
     else:
         return False
@@ -141,7 +169,8 @@ def parse_for_help(answer, help_func):
 
 def ask_simple_field(name, field_type, help_map={}):
 
-    answer = raw_input(name + ": ")
+    type_name = get_type(field_type)
+    answer = raw_input(" - {} ({}): ".format(name, type_name))
     if not answer:
         return None
 
@@ -160,6 +189,12 @@ def ask_simple_field(name, field_type, help_map={}):
 def ask_detail_for_field(name, detail_type, ask_only_required=True, help_map={}):
 
     value = None
+
+    if MODEL_MAP.get(type(detail_type), None):
+        func = MODEL_MAP[type(detail_type)]
+        value = func()
+        return value
+
     # collections are a special case
     if type(detail_type) == booby.fields.Collection:
         # collection
