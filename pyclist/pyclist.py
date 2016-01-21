@@ -327,7 +327,8 @@ class pyclist(object):
                     value = reduce(recursive_get, token.split("."), dict_obj)
                     if not value:
                         value = u''
-                    line.append(unicode(value))
+                    line.append(unicode(value).replace("\n", "\t"))
+
                 lines.append(token_separator.join(line))
 
             print separator.join(lines).encode("utf-8")
