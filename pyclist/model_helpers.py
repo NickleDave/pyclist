@@ -4,7 +4,6 @@ from booby.inspection import get_fields, is_model
 from booby.validators import Required
 from pydoc import locate
 from collections import OrderedDict
-from menus import BaseMenu, Engine
 from collections import OrderedDict
 from tabulate import tabulate
 

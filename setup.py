@@ -28,7 +28,7 @@ test_requirements = [
 
 setup(
     name='pyclist',
-    version='0.2.4',
+    version='0.2.6',
     description="Makes creating cli wrappers for rest services easier.",
     long_description=readme + '\n\n' + history,
     author="Markus Binsteiner",
