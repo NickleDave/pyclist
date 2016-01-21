@@ -294,9 +294,11 @@ class pyclist(object):
 
             return self.result
 
-    def print_result(self, output_format=None, separator=u'\n', token_separator=u'\t'):
+    def print_result(self, output_format=None, separator=u'\n', token_separator=u'\n'):
         '''
         Prints either json output, or a table of strings from the result of the method call.
+
+        If output format is specified, all occurances of '\n' are replaced with '\t', otherwise tools like 'wc -l' would not work reliably.
         '''
 
         output = []
@@ -327,7 +329,7 @@ class pyclist(object):
                     value = reduce(recursive_get, token.split("."), dict_obj)
                     if not value:
                         value = u''
-                    line.append(unicode(value).replace("\n", "\t"))
+                    line.append(unicode(value).replace("\n", "\\n"))
 
                 lines.append(token_separator.join(line))
 
