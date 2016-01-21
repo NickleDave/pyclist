@@ -6,6 +6,7 @@ from pydoc import locate
 from collections import OrderedDict
 from menus import BaseMenu, Engine
 from collections import OrderedDict
+from tabulate import tabulate
 
 import readline
 
@@ -43,6 +44,109 @@ class tabCompleter(object):
         self.listCompleter = listCompleter
 
 
+def ensure_json_value(value):
+
+    if is_model(value):
+        return dict(value)
+    else:
+        return value
+
+
+def ensure_json(value):
+
+    if isinstance(value, (list, tuple)):
+        return [ensure_json_value(w) for w in value]
+    else:
+        return ensure_json_value(value)
+
+
+class EditModel(object):
+
+    def __init__(self, model_type, current_value, help_map):
+        self.model_type = model_type
+        self.current_value = current_value
+        self.new_value = {}
+        self.help_map = help_map
+
+    def get_fields(self):
+        required_details = OrderedDict()
+        non_required_details = OrderedDict()
+
+        for k, f in sorted(get_fields(self.model_type).iteritems()):
+            if is_required(f):
+                required_details[k] = f
+            else:
+                non_required_details[k] = f
+
+        details = OrderedDict()
+        for k, f in required_details.iteritems():
+            details[k] = f
+        for k, f in non_required_details.iteritems():
+            details[k] = f
+
+        return details
+
+    def edit_field(self, field_name):
+
+        new_field_value = self.ask_field(field_name)
+        # field = get_fields(self.current_value).get(field_name)
+        value = ensure_json(new_field_value)
+        self.new_value[field_name] = value
+
+    def ask_field(self, field_name):
+        field_type = self.model_type.__dict__.get(field_name, None)
+
+        if not field_type:
+            print "No field of that name."
+
+        new_value = ask_detail_for_field(
+            field_name, field_type, None, self.help_map)
+
+        if is_model(new_value):
+            new_value = new_value.to_json()
+
+        return new_value
+
+    def print_current(self):
+        fields = self.get_fields()
+
+        table = []
+        i = 1
+        for k, v in fields.iteritems():
+            value = getattr(self.current_value, k, None)
+            row = [k, convert_for_print(value)]
+            table.append(row)
+            i = i + 1
+
+        print tabulate(table)
+
+    def print_new(self):
+        print self.new_value
+
+
+def convert_value_to_print(value):
+
+    f = getattr(value, 'to_json', None)
+    if callable(f):
+        value = value.to_json()
+
+    return value
+
+
+def convert_for_print(value):
+
+    if isinstance(value, (list, tuple)):
+        if len(value) > 0:
+            value = (convert_value_to_print(w) for w in value)
+            value = "[" + ", ".join(value) + "]"
+        else:
+            value = ""
+    else:
+        value = convert_value_to_print(value)
+
+    return value
+
+
 def get_type(model):
 
     if type(model) == fields.Integer or model == fields.Integer:
@@ -71,6 +175,34 @@ def convert_to_proper_base_type(base_type, value):
         return bool(value)
     else:
         return value
+
+
+def edit_details_for_type(model_type, old_object, help_map={}):
+    '''
+    Asks for user input to change an existing model.
+    '''
+
+    m = EditModel(model_type, old_object, help_map)
+
+    print
+    print "Current values:"
+    print
+    m.print_current()
+    print
+    selection = "xxx"
+
+    print
+    print "Caution: the new value will replace the old value, not be added to it."
+    print
+
+    while selection:
+        selection = raw_input("field to edit ('enter' to finish): ")
+        if selection:
+            print
+            m.edit_field(selection)
+            print
+
+    return m.new_value
 
 
 def ask_details_for_type(model_type, ask_only_required=True, help_map={}):
