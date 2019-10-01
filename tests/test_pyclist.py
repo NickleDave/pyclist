@@ -21,7 +21,7 @@ test_no_argument = ['print_default']
 class TestPyclist():
 
     def setup_method(self, method):
-        print method.__name__
+        print(method.__name__)
         self.pyclist = pyclist.pyclist("test pyclist", "a test pyclist instance")
         self.pyclist.root_parser.add_argument('--ending', '-e', help='string or character to append to every output ,global, applicable for all sub-commands')
         self.pyclist.add_command(ExampleApi1, {'print_hello':'name'}, {'ExampleModel': ExampleModel})

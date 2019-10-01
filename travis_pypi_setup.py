@@ -4,7 +4,7 @@
 """
 
 
-from __future__ import print_function
+
 import base64
 import json
 import os
@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 
 
 try:
-    from urllib import urlopen
+    from urllib.request import urlopen
 except:
     from urllib.request import urlopen
 

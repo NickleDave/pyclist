@@ -1,4 +1,4 @@
-from pyclist import pyclist
+from .pyclist import pyclist
 
 
 class ExampleModel(object):

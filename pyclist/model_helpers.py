@@ -8,6 +8,7 @@ from collections import OrderedDict
 from tabulate import tabulate
 
 import readline
+import collections
 
 MODEL_MAP = {}
 
@@ -71,16 +72,16 @@ class EditModel(object):
         required_details = OrderedDict()
         non_required_details = OrderedDict()
 
-        for k, f in sorted(get_fields(self.model_type).iteritems()):
+        for k, f in sorted(get_fields(self.model_type).items()):
             if is_required(f):
                 required_details[k] = f
             else:
                 non_required_details[k] = f
 
         details = OrderedDict()
-        for k, f in required_details.iteritems():
+        for k, f in required_details.items():
             details[k] = f
-        for k, f in non_required_details.iteritems():
+        for k, f in non_required_details.items():
             details[k] = f
 
         return details
@@ -96,7 +97,7 @@ class EditModel(object):
         field_type = self.model_type.__dict__.get(field_name, None)
 
         if not field_type:
-            print "No field of that name."
+            print("No field of that name.")
 
         new_value = ask_detail_for_field(
             field_name, field_type, None, self.help_map)
@@ -111,22 +112,22 @@ class EditModel(object):
 
         table = []
         i = 1
-        for k, v in fields.iteritems():
+        for k, v in fields.items():
             value = getattr(self.current_value, k, None)
             row = [k, convert_for_print(value)]
             table.append(row)
             i = i + 1
 
-        print tabulate(table)
+        print(tabulate(table))
 
     def print_new(self):
-        print self.new_value
+        print(self.new_value)
 
 
 def convert_value_to_print(value):
 
     f = getattr(value, 'to_json', None)
-    if callable(f):
+    if isinstance(f, collections.Callable):
         value = value.to_json()
 
     return value
@@ -183,23 +184,23 @@ def edit_details_for_type(model_type, old_object, help_map={}):
 
     m = EditModel(model_type, old_object, help_map)
 
-    print
-    print "Current values:"
-    print
+    print()
+    print("Current values:")
+    print()
     m.print_current()
-    print
+    print()
     selection = "xxx"
 
-    print
-    print "Caution: the new value will replace the old value, not be added to it."
-    print
+    print()
+    print("Caution: the new value will replace the old value, not be added to it.")
+    print()
 
     while selection:
-        selection = raw_input("field to edit ('enter' to finish): ")
+        selection = input("field to edit ('enter' to finish): ")
         if selection:
-            print
+            print()
             m.edit_field(selection)
-            print
+            print()
 
     return m.new_value
 
@@ -223,44 +224,44 @@ def ask_details_for_type(model_type, ask_only_required=True, help_map={}):
 
     values = {}
 
-    for k, f in sorted(get_fields(model_type).iteritems()):
+    for k, f in sorted(get_fields(model_type).items()):
         if is_required(f):
             required_details[k] = f
         else:
             non_required_details[k] = f
 
-    print
-    print "Enter values for fields below. Enter '?' or '? arg1 [arg2]' for help for each field."
-    print
-    print "Required fields:"
-    print "----------------"
-    print
-    for k, f in required_details.iteritems():
+    print()
+    print("Enter values for fields below. Enter '?' or '? arg1 [arg2]' for help for each field.")
+    print()
+    print("Required fields:")
+    print("----------------")
+    print()
+    for k, f in required_details.items():
         while True:
             value = ask_detail_for_field(k, f, ask_only_required, help_map)
             if value:
                 values[k] = value
                 break
             else:
-                print
-                print "This is a required field, please enter value for {}.".format(k)
+                print()
+                print("This is a required field, please enter value for {}.".format(k))
 
-            print
+            print()
 
     if not ask_only_required:
 
-        print
-        print "Optional fields, press 'Enter' to ignore a field."
-        print "-------------------------------------------------"
-        print
+        print()
+        print("Optional fields, press 'Enter' to ignore a field.")
+        print("-------------------------------------------------")
+        print()
 
-        for k, f in non_required_details.iteritems():
+        for k, f in non_required_details.items():
             value = ask_detail_for_field(k, f, ask_only_required, help_map)
 
             if value:
                 values[k] = value
 
-            print
+            print()
 
     obj = model_type(**values)
 
@@ -270,8 +271,8 @@ def ask_details_for_type(model_type, ask_only_required=True, help_map={}):
 def ask_collection_detail(name, detail_type, ask_only_required=True, help_map={}):
 
     result = []
-    print "Enter details for '{}', multiple entries possible, press enter to continue to next field.".format(name)
-    print
+    print("Enter details for '{}', multiple entries possible, press enter to continue to next field.".format(name))
+    print()
     while True:
         cd = ask_detail_for_field(
             name, detail_type, ask_only_required, help_map)
@@ -288,11 +289,11 @@ def parse_for_help(answer, help_func):
     if answer.startswith('?'):
         args = answer.split(' ')[1:]
         if not help_func:
-            print 'Sorry, no help available for this field.'
+            print('Sorry, no help available for this field.')
         else:
-            print
+            print()
             help_func(*args)
-            print
+            print()
         return True
     else:
         return False
@@ -301,7 +302,7 @@ def parse_for_help(answer, help_func):
 def ask_simple_field(name, field_type, help_map={}):
 
     type_name = get_type(field_type)
-    answer = raw_input(" - {} ({}): ".format(name, type_name))
+    answer = input(" - {} ({}): ".format(name, type_name))
     if not answer:
         return None
 
@@ -311,7 +312,7 @@ def ask_simple_field(name, field_type, help_map={}):
     try:
         value = convert_to_proper_base_type(field_type, answer)
     except Exception as e:
-        print "Can't convert input: ", e
+        print("Can't convert input: ", e)
         return ask_simple_field(name, field_type, help_map)
 
     return value

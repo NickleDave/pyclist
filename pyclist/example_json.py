@@ -1,11 +1,11 @@
-from pyclist import pyclist
+from .pyclist import pyclist
 from booby import Model, fields
 try:
     import simplejson as json
 except ImportError:
     import json  # py2.6 only
 
-from model_helpers import query_for_model
+from .model_helpers import query_for_model
 
 
 def create_model(int_field=None, str_field=None, col_int_field=None, col_str_field=None):

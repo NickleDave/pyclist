@@ -4,6 +4,8 @@ import argcomplete
 import inspect
 from parinx import parser
 import logging
+import collections
+from functools import reduce
 
 try:
     import simplejson as json
@@ -53,16 +55,16 @@ def create_output_item_list(item, list_append=[]):
     :rtype: None
     '''
 
-    if isinstance(item, (list, tuple)) and not isinstance(item, basestring):
+    if isinstance(item, (list, tuple)) and not isinstance(item, str):
         for i in item:
             create_output_item_list(i, list_append)
 
         return
-    elif isinstance(item, basestring):
+    elif isinstance(item, str):
         list_append.append(item)
         return
 
-    if hasattr(item, "to_json") and callable(getattr(item, "to_json")):
+    if hasattr(item, "to_json") and isinstance(getattr(item, "to_json"), collections.Callable):
         list_append.append(item.to_json(sort_keys=True, indent=2))
     else:
         if isinstance(item, Exception):
@@ -186,7 +188,7 @@ class pyclist(object):
 
         parser = self.subparsers.add_parser(name, help=description)
 
-        for key, value in arguments_dict.iteritems():
+        for key, value in arguments_dict.items():
 
             arg = value['type_name']
             desc = value['description']
@@ -255,7 +257,7 @@ class pyclist(object):
 
         else:
 
-            for key, value in self.arg_details[self.command]['arguments'].iteritems():
+            for key, value in self.arg_details[self.command]['arguments'].items():
 
                 v = vars(self.namespace)[key]
 
@@ -294,7 +296,7 @@ class pyclist(object):
 
             return self.result
 
-    def print_result(self, output_format=None, separator=u'\n', token_separator=u'\n'):
+    def print_result(self, output_format=None, separator='\n', token_separator='\n'):
         '''
         Prints either json output, or a table of strings from the result of the method call.
 
@@ -312,9 +314,9 @@ class pyclist(object):
         if not output_format:
 
             if len(output) == 1:
-                print output[0]
+                print(output[0])
             else:
-                print "[" + ",\n".join(output) + "]"
+                print("[" + ",\n".join(output) + "]")
 
         else:
 
@@ -328,9 +330,9 @@ class pyclist(object):
                 for token in output_format.split(','):
                     value = reduce(recursive_get, token.split("."), dict_obj)
                     if not value:
-                        value = u''
-                    line.append(unicode(value).replace("\n", "\\n"))
+                        value = ''
+                    line.append(str(value).replace("\n", "\\n"))
 
                 lines.append(token_separator.join(line))
 
-            print separator.join(lines).encode("utf-8")
+            print(separator.join(lines).encode("utf-8"))
